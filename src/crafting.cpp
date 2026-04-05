@@ -1550,17 +1550,25 @@ std::vector<detached_ptr<item>> Character::consume_items( map &m,
 {
     std::vector<detached_ptr<item>> ret;
 
-    if( has_trait( trait_DEBUG_HS ) ) {
-        return ret;
-    }
-
     item_comp selected_comp = is.comp;
 
-    const tripoint &loc = origin;
     const bool by_charges = item::count_by_charges( selected_comp.type ) && selected_comp.count > 0;
     // Count given to use_amount/use_charges, changed by those functions!
     int real_count = ( selected_comp.count > 0 ) ? selected_comp.count * batch : std::abs(
-                         selected_comp.count );
+        selected_comp.count );
+
+    if( has_trait( trait_DEBUG_HS ) ) {
+        if( by_charges ) {
+            ret.push_back( item::spawn( selected_comp.type, calendar::start_of_cataclysm, real_count ) );
+        } else {
+            for( int i = 0; i < real_count; i++ ) {
+                ret.push_back( item::spawn( selected_comp.type ) );
+            }
+        }
+        return ret;
+    }
+
+    const tripoint &loc = origin;
     // First try to get everything from the map, than (remaining amount) from player
     if( is.use_from & usage_from::map ) {
         if( by_charges ) {
@@ -1581,7 +1589,7 @@ std::vector<detached_ptr<item>> Character::consume_items( map &m,
                         std::make_move_iterator( tmp.end() ) );
         }
     }
-    if( is.use_from & usage_from::player ) {
+    if( is.use_from & usage_from::player && ! has_trait( trait_DEBUG_HS ) ) {
         if( by_charges ) {
             std::vector<detached_ptr<item>> tmp = use_charges( selected_comp.type, real_count, filter );
             ret.insert( ret.end(), std::make_move_iterator( tmp.begin() ),
